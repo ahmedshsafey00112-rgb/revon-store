@@ -10,6 +10,9 @@ import {
 } from "firebase/firestore";
 
 export default function AdminPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [password, setPassword] = useState("");
+
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
@@ -19,8 +22,28 @@ export default function AdminPage() {
   const [productsList, setProductsList] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchProducts();
+    const adminAuth = localStorage.getItem("adminAuth");
+
+    if (adminAuth === "true") {
+      setIsLoggedIn(true);
+      fetchProducts();
+    }
   }, []);
+
+  const login = () => {
+    if (password === "revon123") {
+      localStorage.setItem("adminAuth", "true");
+      setIsLoggedIn(true);
+      fetchProducts();
+    } else {
+      alert("Wrong Password");
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("adminAuth");
+    location.reload();
+  };
 
   const fetchProducts = async () => {
     const snapshot = await getDocs(
@@ -65,11 +88,49 @@ export default function AdminPage() {
     }
   };
 
+  if (!isLoggedIn) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-black p-6">
+        <div className="w-full max-w-md rounded-2xl bg-zinc-900 p-8">
+          <h1 className="mb-6 text-center text-4xl font-bold text-yellow-500">
+            Admin Login
+          </h1>
+
+          <input
+            type="password"
+            placeholder="Enter Password"
+            value={password}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
+            className="mb-4 w-full rounded-xl bg-zinc-800 p-4 text-white outline-none"
+          />
+
+          <button
+            onClick={login}
+            className="w-full rounded-xl bg-yellow-500 p-4 font-bold text-black"
+          >
+            Login
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-black p-10 text-white">
-      <h1 className="mb-10 text-5xl font-bold text-yellow-500">
-        Admin Panel
-      </h1>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-5xl font-bold text-yellow-500">
+          Admin Panel
+        </h1>
+
+        <button
+          onClick={logout}
+          className="rounded-xl bg-red-600 px-5 py-3 font-bold"
+        >
+          Logout
+        </button>
+      </div>
 
       <div className="max-w-xl space-y-4 rounded-xl bg-zinc-900 p-6">
         <input
@@ -92,7 +153,9 @@ export default function AdminPage() {
           type="text"
           placeholder="Category"
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={(e) =>
+            setCategory(e.target.value)
+          }
           className="w-full rounded-xl bg-zinc-800 p-4 outline-none"
         />
 
@@ -144,40 +207,34 @@ export default function AdminPage() {
         </h2>
 
         <div className="space-y-3">
-          {productsList.length === 0 ? (
-            <div className="rounded-xl bg-zinc-900 p-4 text-zinc-400">
-              No products added yet
-            </div>
-          ) : (
-            productsList.map((product) => (
-              <div
-                key={product.id}
-                className="rounded-xl bg-zinc-800 p-4"
-              >
-                <div className="flex items-center gap-4">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="h-20 w-20 rounded-lg object-cover"
-                  />
+          {productsList.map((product) => (
+            <div
+              key={product.id}
+              className="rounded-xl bg-zinc-800 p-4"
+            >
+              <div className="flex items-center gap-4">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="h-20 w-20 rounded-lg object-cover"
+                />
 
-                  <div>
-                    <h3 className="font-bold">
-                      {product.name}
-                    </h3>
+                <div>
+                  <h3 className="font-bold">
+                    {product.name}
+                  </h3>
 
-                    <p className="text-zinc-400">
-                      {product.price} EGP
-                    </p>
+                  <p className="text-zinc-400">
+                    {product.price} EGP
+                  </p>
 
-                    <p className="text-zinc-500">
-                      {product.category}
-                    </p>
-                  </div>
+                  <p className="text-zinc-500">
+                    {product.category}
+                  </p>
                 </div>
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
       </div>
     </main>
