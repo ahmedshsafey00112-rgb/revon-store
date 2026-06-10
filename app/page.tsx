@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { products } from "./data/products";
 import Link from "next/link";
 import { useCart } from "./context";
+import { products } from "./data/products";
+
+import { db } from "./firebase";
+import {
+  collection,
+  getDocs,
+} from "firebase/firestore";
 
 export default function Home() {
   const { cart, setCart } = useCart();
@@ -12,18 +18,35 @@ export default function Home() {
   const [adminProducts, setAdminProducts] = useState<any[]>([]);
 
   useEffect(() => {
-    const savedProducts = JSON.parse(
-      localStorage.getItem("adminProducts") || "[]"
-    );
+    const fetchProducts = async () => {
+      try {
+        const snapshot = await getDocs(
+          collection(db, "products")
+        );
 
-    setAdminProducts(savedProducts);
+        const firebaseProducts = snapshot.docs.map(
+          (doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })
+        );
+
+        setAdminProducts(firebaseProducts);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchProducts();
   }, []);
 
-  const allProducts = [...products, ...adminProducts];
+  const allProducts = [
+    ...products,
+    ...adminProducts,
+  ];
 
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* Navbar */}
       <nav className="flex items-center justify-between border-b border-zinc-800 px-10 py-5">
         <div className="flex items-center gap-6">
           <h2 className="text-2xl font-bold text-yellow-500">
@@ -59,7 +82,6 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero */}
       <section className="flex min-h-[85vh] flex-col items-center justify-center px-6 text-center">
         <span className="mb-4 tracking-[6px] text-yellow-500">
           LUXURY PERFUMES
@@ -85,7 +107,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Products */}
       <section className="px-10 py-20">
         <h2 className="mb-10 text-center text-4xl font-bold text-yellow-500">
           Best Sellers

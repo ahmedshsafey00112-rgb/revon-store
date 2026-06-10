@@ -1,6 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { db } from "../firebase";
+
+import {
+  collection,
+  addDoc,
+  getDocs,
+} from "firebase/firestore";
 
 export default function AdminPage() {
   const [name, setName] = useState("");
@@ -8,85 +15,54 @@ export default function AdminPage() {
   const [category, setCategory] = useState("");
   const [image, setImage] = useState("");
   const [file, setFile] = useState<File | null>(null);
+
   const [productsList, setProductsList] = useState<any[]>([]);
-  const [editingId, setEditingId] = useState<number | null>(null);
 
   useEffect(() => {
-    const savedProducts = JSON.parse(
-      localStorage.getItem("adminProducts") || "[]"
-    );
-
-    setProductsList(savedProducts);
+    fetchProducts();
   }, []);
 
-  const addProduct = () => {
-  if (!name || !price || !category || !image) {
-    alert("Please fill all fields");
-    return;
-  }
-
-  if (editingId) {
-    const updatedProducts = productsList.map(
-      (product) =>
-        product.id === editingId
-          ? {
-              ...product,
-              name,
-              price: Number(price),
-              category,
-              image,
-            }
-          : product
+  const fetchProducts = async () => {
+    const snapshot = await getDocs(
+      collection(db, "products")
     );
 
-    localStorage.setItem(
-      "adminProducts",
-      JSON.stringify(updatedProducts)
-    );
+    const products = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
-    setProductsList(updatedProducts);
-    setEditingId(null);
-  } else {
-    const newProduct = {
-      id: Date.now(),
-      name,
-      price: Number(price),
-      category,
-      image,
-    };
+    setProductsList(products);
+  };
 
-    const updatedProducts = [
-      ...productsList,
-      newProduct,
-    ];
+  const addProduct = async () => {
+    if (!name || !price || !category || !image) {
+      alert("Please fill all fields");
+      return;
+    }
 
-    localStorage.setItem(
-      "adminProducts",
-      JSON.stringify(updatedProducts)
-    );
+    try {
+      await addDoc(collection(db, "products"), {
+        name,
+        price: Number(price),
+        category,
+        image,
+        createdAt: Date.now(),
+      });
 
-    setProductsList(updatedProducts);
-  }
+      setName("");
+      setPrice("");
+      setCategory("");
+      setImage("");
+      setFile(null);
 
-  setName("");
-  setPrice("");
-  setCategory("");
-  setImage("");
+      await fetchProducts();
 
-  alert("Saved Successfully");
-};
-
-  const deleteProduct = (id: number) => {
-    const updatedProducts = productsList.filter(
-      (product) => product.id !== id
-    );
-
-    localStorage.setItem(
-      "adminProducts",
-      JSON.stringify(updatedProducts)
-    );
-
-    setProductsList(updatedProducts);
+      alert("Product Added Successfully");
+    } catch (error) {
+      console.error(error);
+      alert("Error Adding Product");
+    }
   };
 
   return (
@@ -121,38 +97,44 @@ export default function AdminPage() {
         />
 
         <input
-  type="file"
-  accept="image/*"
-  onChange={(e) => {
-    const selectedFile = e.target.files?.[0];
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const selectedFile =
+              e.target.files?.[0];
 
-    if (selectedFile) {
-      setFile(selectedFile);
+            if (selectedFile) {
+              setFile(selectedFile);
 
-      const reader = new FileReader();
+              const reader = new FileReader();
 
-      reader.onloadend = () => {
-        setImage(reader.result as string);
-      };
+              reader.onloadend = () => {
+                setImage(
+                  reader.result as string
+                );
+              };
 
-      reader.readAsDataURL(selectedFile);
-    }
-  }}
-  className="w-full rounded-xl bg-zinc-800 p-4 outline-none"
-/>
-{image && (
-  <img
-    src={image}
-    alt="preview"
-    className="h-40 w-full rounded-xl object-contain bg-zinc-800 p-2"
-  />
-)}
+              reader.readAsDataURL(
+                selectedFile
+              );
+            }
+          }}
+          className="w-full rounded-xl bg-zinc-800 p-4 outline-none"
+        />
+
+        {image && (
+          <img
+            src={image}
+            alt="preview"
+            className="h-40 w-full rounded-xl bg-zinc-800 p-2 object-contain"
+          />
+        )}
 
         <button
           onClick={addProduct}
           className="w-full rounded-xl bg-yellow-500 p-4 font-bold text-black"
         >
-          {editingId ? "Update Product" : "Add Product"}
+          Add Product
         </button>
       </div>
 
@@ -170,41 +152,29 @@ export default function AdminPage() {
             productsList.map((product) => (
               <div
                 key={product.id}
-                className="flex items-center justify-between rounded-xl bg-zinc-800 p-4"
+                className="rounded-xl bg-zinc-800 p-4"
               >
-                <div>
-                  <h3 className="font-bold">
-                    {product.name}
-                  </h3>
+                <div className="flex items-center gap-4">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="h-20 w-20 rounded-lg object-cover"
+                  />
 
-                  <p className="text-zinc-400">
-                    {product.price} EGP
-                  </p>
+                  <div>
+                    <h3 className="font-bold">
+                      {product.name}
+                    </h3>
+
+                    <p className="text-zinc-400">
+                      {product.price} EGP
+                    </p>
+
+                    <p className="text-zinc-500">
+                      {product.category}
+                    </p>
+                  </div>
                 </div>
-
-                <div className="flex gap-2">
-  <button
-    onClick={() => {
-      setEditingId(product.id);
-      setName(product.name);
-      setPrice(product.price.toString());
-      setCategory(product.category);
-      setImage(product.image);
-    }}
-    className="rounded-lg bg-blue-600 px-4 py-2"
-  >
-    Edit
-  </button>
-
-  <button
-    onClick={() =>
-      deleteProduct(product.id)
-    }
-    className="rounded-lg bg-red-600 px-4 py-2"
-  >
-    Delete
-  </button>
-</div>
               </div>
             ))
           )}
