@@ -7,8 +7,9 @@ import {
   collection,
   addDoc,
   getDocs,
+  deleteDoc,
+  doc,
 } from "firebase/firestore";
-
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState("");
@@ -44,19 +45,29 @@ export default function AdminPage() {
     localStorage.removeItem("adminAuth");
     location.reload();
   };
+const fetchProducts = async () => {
+  const snapshot = await getDocs(
+    collection(db, "products")
+  );
 
-  const fetchProducts = async () => {
-    const snapshot = await getDocs(
-      collection(db, "products")
-    );
+  const products = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 
-    const products = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+  setProductsList(products);
+};
+  const deleteProduct = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, "products", id));
 
-    setProductsList(products);
-  };
+    await fetchProducts();
+
+    alert("Product Deleted Successfully");
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   const addProduct = async () => {
     if (!name || !price || !category || !image) {
@@ -72,6 +83,17 @@ export default function AdminPage() {
         image,
         createdAt: Date.now(),
       });
+      const deleteProduct = async (id: string) => {
+  try {
+    await deleteDoc(doc(db, "products", id));
+
+    await fetchProducts();
+
+    alert("Product Deleted Successfully");
+  } catch (error) {
+    console.error(error);
+  }
+};
 
       setName("");
       setPrice("");
@@ -219,19 +241,28 @@ export default function AdminPage() {
                   className="h-20 w-20 rounded-lg object-cover"
                 />
 
-                <div>
-                  <h3 className="font-bold">
-                    {product.name}
-                  </h3>
+                <div className="flex w-full items-center justify-between">
+  <div>
+    <h3 className="font-bold">
+      {product.name}
+    </h3>
 
-                  <p className="text-zinc-400">
-                    {product.price} EGP
-                  </p>
+    <p className="text-zinc-400">
+      {product.price} EGP
+    </p>
 
-                  <p className="text-zinc-500">
-                    {product.category}
-                  </p>
-                </div>
+    <p className="text-zinc-500">
+      {product.category}
+    </p>
+  </div>
+
+  <button
+    onClick={() => deleteProduct(product.id)}
+    className="rounded-lg bg-red-600 px-4 py-2 font-bold"
+  >
+    Delete
+  </button>
+</div>
               </div>
             </div>
           ))}
